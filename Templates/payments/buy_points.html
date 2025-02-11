@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Buy Points{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Buy Points</h2>
+                
+                <div class="row mb-4">
+                    {% for package in point_packages %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card package-card">
+                            <div class="card-body text-center">
+                                <h3>{{ package.points }} Points</h3>
+                                <p class="price">${{ package.price }}</p>
+                                <button class="btn btn-outline-primary select-package"
+                                        onclick="selectPackage({{ package.id }})">
+                                    Select
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <form id="payment-form" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" id="selected-package" name="package_id">
+                    
+                    <h4 class="mb-3">Select Payment Method</h4>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="payment-method-card" data-method="orange" onclick="initializePayment('orange')">
+                                <img src="{% static 'img/orange-money.png' %}" 
+                                     alt="Orange Money" class="img-fluid">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="payment-method-card" onclick="initializePayment('afrimoney')">
+                                <img src="{% static 'img/afrimoney.png' %}" 
+                                     alt="Afrimoney" class="img-fluid">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="payment-method-card" onclick="initializePayment('crypto')">
+                                <img src="{% static 'img/crypto.png' %}" 
+                                     alt="Cryptocurrency" class="img-fluid">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="payment-method" name="payment_method">
+                    
+                    <div id="payment-details" class="d-none">
+                        <!-- Dynamic payment form fields will be inserted here -->
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        Proceed to Payment
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/payments.js' %}"></script>
+{% endblock %}

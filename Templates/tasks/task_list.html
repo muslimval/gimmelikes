@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Available Tasks{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="points-display">
+            <h3>Your Points: {{ user.profile.points }}</h3>
+            <p>Complete tasks to earn more points!</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Filter Tasks</h5>
+                <form method="GET">
+                    <div class="form-group">
+                        <label>Platform</label>
+                        {% for platform in platforms %}
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" 
+                                   id="platform_{{ platform.0 }}" name="platform" 
+                                   value="{{ platform.0 }}"
+                                   {% if platform.0 in selected_platforms %}checked{% endif %}>
+                            <label class="custom-control-label" for="platform_{{ platform.0 }}">
+                                {{ platform.1 }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        <label>Task Type</label>
+                        {% for type in task_types %}
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" 
+                                   id="type_{{ type.0 }}" name="type" 
+                                   value="{{ type.0 }}"
+                                   {% if type.0 in selected_types %}checked{% endif %}>
+                            <label class="custom-control-label" for="type_{{ type.0 }}">
+                                {{ type.1 }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="row">
+            {% for task in tasks %}
+            <div class="col-md-6 mb-4">
+                <div class="card task-card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ task.get_task_type_display }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            {{ task.get_platform_display }}
+                        </h6>
+                        <p class="card-text">
+                            Reward: {{ task.points_reward }} points
+                        </p>
+                        <a href="{{ task.link }}" target="_blank" 
+                           class="btn btn-primary btn-sm mr-2">
+                            View Content
+                        </a>
+                        <button class="btn btn-success btn-sm verify-task" data-task-id="{{ task.id }}">
+                            Complete Task
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No tasks available at the moment. Please check back later!
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if tasks.has_other_pages %}
+        <nav aria-label="Task pagination">
+            <ul class="pagination justify-content-center">
+                {% if tasks.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ tasks.previous_page_number }}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in tasks.paginator.page_range %}
+                <li class="page-item {% if tasks.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                
+                {% if tasks.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ tasks.next_page_number }}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const verifyButtons = document.querySelectorAll('.verify-task');
+    verifyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            verifyTask(taskId);
+        });
+    });
+});
+
+function verifyTask(taskId) {
+    // Show loading indicator
+    showLoading();
+
+    // Make an AJAX call to verify the task
+    fetch(`/api/verify-task/${taskId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updatePoints(data.points);
+            showSuccess('Task completed successfully!');
+        } else {
+            showError(data.message || 'An error occurred. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('An error occurred. Please try again.');
+    })
+    .finally(() => {
+        // Hide loading indicator
+        hideLoading();
+    });
+}
+
+function showLoading() {
+    // Implement your loading indicator here
+    console.log('Loading...');
+}
+
+function hideLoading() {
+    // Hide your loading indicator here
+    console.log('Loading finished');
+}
+
+function updatePoints(points) {
+    const pointsDisplay = document.querySelector('.points-display h3');
+    if (pointsDisplay) {
+        pointsDisplay.textContent = `Your Points: ${points}`;
+    }
+}
+
+function showSuccess(message) {
+    alert(message); // Replace with a more user-friendly notification
+}
+
+function showError(message) {
+    alert(message); // Replace with a more user-friendly notification
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
